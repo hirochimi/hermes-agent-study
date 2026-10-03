@@ -116,9 +116,10 @@ async def test_wakeword():
     # Process dummy audio frames of 1280 samples at 16kHz (0.08s)
     frame = np.zeros(1280, dtype=np.float32)
     times = []
+    loop = asyncio.get_event_loop()
     for i in range(100):  # more iterations for stable avg
         start = time.perf_counter()
-        result = eng.process_audio(frame)
+        result = await loop.run_in_executor(None, eng.process_audio, frame)
         elapsed = time.perf_counter() - start
         times.append(elapsed)
     await eng.stop()
