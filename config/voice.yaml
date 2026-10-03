@@ -1,0 +1,112 @@
+# Voice Pipeline Configuration for Hermes Agent Fork
+# All values can be overridden via environment variables (HERMES_VOICE_*)
+
+# Memory budget allocation (MB) - total should not exceed available RAM
+memory_budget:
+  hermes_core: 4096      # Hermes Agent core process
+  stt_engine: 3072       # Speech-to-Text (Whisper.cpp / faster-whisper)
+  tts_engine: 2048       # Text-to-Speech (Piper / Coqui)
+  wakeword_engine: 1024  # Wake word detection (openWakeWord / Porcupine)
+  decision_ai: 1024      # Optional decision AI (jev, Laya, etc.)
+  os_reserve: 6144       # OS reserve (do not reduce below 4GB)
+  # Total: ~16GB
+
+# Audio settings
+audio:
+  sample_rate: 16000
+  channels: 1
+  chunk_size: 1024
+  format: "int16"
+  input_device: null      # null = default
+  output_device: null     # null = default
+
+# Wake word detection
+wakeword:
+  enabled: true
+  engine: "openwakeword"  # openwakeword, porcupine, pvporcupine
+  model_path: null        # Auto-download if null
+  sensitivity: 0.5
+  keywords:
+    - "エルメス"
+    - "hermes"
+  # Porcupine specific
+  porcupine_access_key: null
+  # openWakeWord specific
+  openwakeword_model: "hey_jarvis"  # or custom .onnx model path
+
+# Speech-to-Text (STT)
+stt:
+  enabled: true
+  engine: "faster-whisper"  # faster-whisper, whisper.cpp, vosk
+  model: "base"             # tiny, base, small, medium, large-v3
+  device: "cpu"             # cpu, cuda, auto
+  compute_type: "int8"      # int8, float16, float32
+  language: "ja"            # ja, en, auto
+  beam_size: 5
+  vad_filter: true
+  vad_parameters:
+    min_silence_duration_ms: 500
+    speech_pad_ms: 400
+
+# Text-to-Speech (TTS)
+tts:
+  enabled: true
+  engine: "piper"           # piper, coqui, styletts2
+  model: "ja_JP-kurokumo-medium"  # Piper voice model
+  speaker_id: 0
+  length_scale: 1.0
+  noise_scale: 0.667
+  noise_w: 0.8
+  # Coqui specific
+  coqui_model: "tts_models/ja/kokoro/tacotron2-DDC"
+  # StyleTTS2 specific
+  styletts2_model: null
+
+# Voice transport (for Android/client communication)
+transport:
+  enabled: true
+  protocol: "websocket"     # websocket, grpc, http+sse
+  host: "0.0.0.0"
+  port: 8765
+  ssl_enabled: false
+  ssl_cert_path: null
+  ssl_key_path: null
+  # Audio streaming format
+  audio_format: "opus"      # opus, pcm, wav
+  opus_bitrate: 32000
+  opus_frame_duration: 20  # ms
+
+# OpenRouter LLM Configuration
+llm:
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
+  model: "nvidia/nemotron-3-ultra:free"
+  # Alternative free models:
+  # - "nvidia/nemotron-3-ultra:free"
+  # - "mistralai/mistral-7b-instruct:free"
+  # - "google/gemma-2-9b-it:free"
+  # - "meta-llama/llama-3.1-8b-instruct:free"
+  function_calling: true
+  max_tokens: 4096
+  temperature: 0.7
+  top_p: 0.9
+  # Rate limiting
+  requests_per_minute: 20
+  tokens_per_minute: 100000
+
+# Decision AI (optional, for future use)
+decision_ai:
+  enabled: false
+  engine: "local"           # local, api
+  models: []                # jev, Laya, etc. model paths
+  # API mode
+  api_endpoint: null
+  api_key_env: null
+
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/voice_pipeline.log"
+  max_size_mb: 100
+  backup_count: 5
