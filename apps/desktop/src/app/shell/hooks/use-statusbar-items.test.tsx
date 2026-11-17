@@ -154,7 +154,7 @@ describe('statusbar update channel vocabulary', () => {
 
     const version = renderStatusbarItems().statusbarItems.find(item => item.id === 'version-client')
 
-    expect(version?.label).toBe('v0.21.6 (update)')
+    expect(version?.label).toBe('+v0.21.6 (update)')
     expect(version?.title).toContain('v0.21.7 is available')
   })
 

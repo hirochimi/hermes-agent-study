@@ -16,7 +16,7 @@ describe('resolveVersionStatus', () => {
   it('labels a current local client with its distance, keeping the commit for the tooltip', () => {
     const status = client({ sha: 'abc1234', version: '0.4.2+1913.gabc1234' })
 
-    expect(status.label).toBe('v0.4.2+1913')
+    expect(status.label).toBe('+v0.4.2+1913')
     expect(status.tooltip).toContain('abc1234')
     expect(status.hasUpdate).toBe(false)
     expect(status.unknown).toBe(false)
@@ -25,7 +25,7 @@ describe('resolveVersionStatus', () => {
   it('appends the commit diff when the client is behind', () => {
     const status = client({ behind: 12, branch: 'main', version: '0.4.2' })
 
-    expect(status.label).toBe('v0.4.2 (+12)')
+    expect(status.label).toBe('+v0.4.2 (+12)')
     expect(status.hasUpdate).toBe(true)
     expect(status.tooltip).toContain('12 commits behind main')
   })
@@ -37,7 +37,7 @@ describe('resolveVersionStatus', () => {
   it('shows a count-free update hint when the client count is unknown', () => {
     const status = client({ behind: 0, updateAvailable: true, version: '0.4.2' })
 
-    expect(status.label).toBe(`v0.4.2 (${copy.update})`)
+    expect(status.label).toBe(`+v0.4.2 (${copy.update})`)
     expect(status.label).not.toContain('+1')
     expect(status.hasUpdate).toBe(true)
   })
@@ -54,16 +54,16 @@ describe('resolveVersionStatus', () => {
     expect(client({ version: 'unknown', sha: 'abc1234' }).unknown).toBe(false)
     expect(client({ version: 'unknown' }).unknown).toBe(true)
     expect(backend({ version: 'unknown', sha: 'abc1234' }).unknown).toBe(true)
-    expect(client({ version: 'git.abc1234' }).label).toBe('vgit.abc1234')
+    expect(client({ version: 'git.abc1234' }).label).toBe('+vgit.abc1234')
   })
 
   it('drops the diff while an apply is in flight', () => {
     const applying = client({ applying: true, behind: 3, sha: 'abc1234', version: '0.4.2' })
 
-    expect(applying.label).toBe('v0.4.2 · update')
+    expect(applying.label).toBe('+v0.4.2 · update')
     expect(applying.hasUpdate).toBe(false)
 
-    expect(client({ applying: true, restarting: true, version: '0.4.2' }).label).toBe('v0.4.2 · restart')
+    expect(client({ applying: true, restarting: true, version: '0.4.2' }).label).toBe('+v0.4.2 · restart')
   })
 
   it('labels the backend target distinctly and never claims a client sha', () => {
@@ -90,7 +90,7 @@ describe('resolveVersionStatus', () => {
 
   it('stable channel: releases use the update word, never a commit count', () => {
     const label = client({ behind: 4, updateAvailable: true, channel: 'stable', version: '0.4.2' }).label
-    expect(label).toBe('v0.4.2 (update)')
+    expect(label).toBe('+v0.4.2 (update)')
   })
 
   it('stable channel tooltip names the release tag', () => {
