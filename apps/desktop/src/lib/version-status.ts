@@ -133,11 +133,15 @@ export function resolveVersionStatus({
   // A client with no version still identifies itself by sha; a backend can't.
   const named = version ?? (client ? sha : null) ?? copy.unknown
 
+  // shortVersion strips the leading `v`; git-based versions (e.g. `git.dd94faf.dirty`)
+  // need it restored so the label reads `+vgit.dd94faf.dirty`.
+  const versionPrefix = version && (/^git\./.test(version) || /\.dirty$/.test(version)) ? '+v' : '+'
+
   const base = !client
     ? copy.backendLabel(named)
     : remote
       ? copy.clientLabel(named)
-      : (version && `v${version}`) || named
+      : (version && `${versionPrefix}${version}`) || named
 
   // Main channel: commits behind is the precise diff. Stable channel: a
   // count of commits is the wrong vocabulary — a release is one step, so
@@ -150,7 +154,7 @@ export function resolveVersionStatus({
     ...(busy
       ? []
       : pendingLines({ available, behind, branch: client ? branch : 'main', copy, latestTag, rollback, stable })),
-    version && (client ? copy.desktopVersion(version) : copy.backendVersion(version)),
+    version && (client ? copy.desktopVersion(`${versionPrefix}${version}`) : copy.backendVersion(`${versionPrefix}${version}`)),
     client && sha && copy.commit(sha),
     // The branch line is main-channel vocabulary; a stable checkout sits on
     // a tag, and naming a branch would contradict the release line.
