@@ -176,11 +176,16 @@ from tools.environments.base import EnvironmentConnectionError
 
 
 # Tool description for LLM
-TERMINAL_TOOL_DESCRIPTION = """Run shell commands on the OS/shell/backend named in your environment section. The working directory, files and exported variables persist between calls: activate a virtualenv or export once, not before every command.
+TERMINAL_TOOL_DESCRIPTION = """Run shell commands on the OS/shell/backend named in your environment section. The cwd and env persist between calls: activate a virtualenv or export once. Output is truncated, full text saved to a file; never pipe through head/tail just to shorten output.
 
-Use read_file, search_files, patch and write_file instead of cat/head/tail, grep/find/ls, sed/awk and echo/heredoc. Output is auto-truncated with the full text saved to a file; never pipe through head/tail to shorten it.
+Foreground (default) returns when done; to wait a fixed time, sleep in the foreground, never a background or polling loop. Health-check background servers separately; use process_manage for jobs. Trust the result's "cwd" after a cd."""
 
-Foreground (default) returns as soon as the command finishes. To wait a fixed time, run the wait in the foreground; never background a sleep or polling loop. Health-check a background server in a separate call and manage jobs with process_manage. When a command changes directory, trust the result's "cwd" instead of prefixing later commands with cd."""
+# Appended by model_tools._rewrite_terminal only when the session has the tools they name: a
+# terminal-only session must not be told to avoid its only file route. Kept last in the description
+# on purpose (live A/B: the same redirect near the top barely moved Opus off cat/grep).
+TERMINAL_FILE_TOOLS_HINT = " Do not use it to read, search or edit text files (cat, head, tail, sed -n, grep, find, sed -i, echo >, heredocs): read_file, search_files, patch and write_file do that and are tracked"
+TERMINAL_FILE_TOOL_NAMES = frozenset({"read_file", "search_files", "patch", "write_file"})
+TERMINAL_EXECUTE_CODE_HINT = "; for several files or counts, call them in parallel or loop in execute_code"
 
 # Environment lifecycle state.
 _active_environments: dict[str, Any] = {}
@@ -1446,8 +1451,11 @@ def _run_foreground(
             # bounded_capture: model-facing output keeps a head/tail window
             # while streaming so a verbose command can't OOM the gateway;
             # internal env.execute() consumers stay unbounded.
+            # Only the session's inherited cwd may fall back (the result tells the model); a
+            # ``workdir`` the model named is refused, or a typo would run ``rm -f ./*`` a level up.
             result = env.execute(
                 command, timeout=effective_timeout, cwd=command_cwd, bounded_capture=True,
+                allow_cwd_fallback=not workdir,
                 **_yield_kwargs(command, env_type=env_type, cwd=command_cwd, effective_task_id=eff,
                                 task_id=task_id, session_key=session_key),
             )
@@ -1492,8 +1500,8 @@ _PRE_EXEC_GUARD_MIN_TIMEOUT_S = 30
 
 def _refuse_missing_local_workdir(workdir: str, env: Any) -> None:
     """An explicit ``workdir`` the model named is never swapped for a parent: a typo would run
-    ``rm -f ./*`` one level up. Only a cwd the session inherited falls back (``_usable_cwd``),
-    and only ``LocalEnvironment`` falls back at all."""
+    ``rm -f ./*`` one level up. Only a cwd the session inherited falls back (``_usable_cwd``);
+    sandbox wrappers refuse it themselves (``execute(allow_cwd_fallback=False)``)."""
     from tools.environments.local import LocalEnvironment
     if not isinstance(env, LocalEnvironment):
         return
